@@ -4,23 +4,46 @@ A collection of Pawn includes that replaces the most commonly used YSI modules w
 
 ---
 
-## Overview
+## Dependencies
 
-YSI Core has two properties that make it difficult to use alongside PawnPlus:
+This toolkit requires two external dependencies to be installed before the includes in this repository will compile.
 
-- It reshuffles the AMX public function table during startup, which invalidates callback indices that PawnPlus registered earlier.
-- It pulls in a large dependency graph even when a single module is needed.
+### 1. PawnPlus (required)
 
-This repository provides direct replacements for the four YSI modules used in most production gamemodes:
+PawnPlus is a SA-MP/open.mp plugin that extends the Pawn scripting language with new constructs, data types, and programming techniques. It provides the dynamic containers, iterators, tasks, and callback hooks that every module in this toolkit is built on.
 
-| YSI Module | Replacement |
-|---|---|
-| `YSI_Data\y_iterate` | `pp-foreach.inc` |
-| `YSI_Coding\y_va` | `pp-va.inc` |
-| `YSI_Coding\y_hooks` | `pp-hooks.inc` |
-| Assorted YSI helper functions | `legacy-compat.inc` |
+**Repository:** https://github.com/IS4Code/PawnPlus
 
-Each file is self-contained, requires only PawnPlus and open.mp headers, and preserves the original YSI surface so existing code continues to compile without call-site changes.
+**Installation:**
+
+1. Download the latest release for your platform from the [Releases page](https://github.com/IS4Code/PawnPlus/releases/latest).
+2. Extract the plugin binary into your server's `plugins/` directory:
+   - Windows: `PawnPlus.dll`
+   - Linux: `PawnPlus.so`
+3. Add `PawnPlus` to the `plugins` line in `server.cfg`:
+   ```
+   plugins PawnPlus
+   ```
+4. Copy `PawnPlus.inc` from the release into your compiler's `include/` directory.
+
+PawnPlus v1.5.3 or newer is required.
+
+### 2. pawn-unique (required for `pp-hooks`)
+
+pawn-unique is a standalone version of YSI's `y_unique` library. It generates unique compile-time identifiers through repeated inclusion, which `pp-hooks.inc` uses to create distinct hook function names without requiring `y_unique` from YSI Core.
+
+**Repository:** https://github.com/r4sheed/pawn-unique
+
+**Installation:**
+
+1. Download the repository or install it via sampctl:
+   ```
+   sampctl package install r4sheed/pawn-unique
+   ```
+2. Copy `unique-symbol.inc` into your compiler's `include/` directory.
+3. The include is pulled in automatically by `pp-hooks.inc`. No explicit `#include` is required in your gamemode.
+
+If you are not using `pp-hooks.inc`, you do not need pawn-unique.
 
 ---
 
@@ -206,6 +229,8 @@ If a function must forward its variadic arguments to another user-defined functi
 
 Replaces `YSI_Coding\y_hooks`.
 
+> **Requires pawn-unique.** `pp-hooks.inc` uses `unique-symbol.inc` to generate distinct function names for each hook declaration. Install pawn-unique as described in the Dependencies section.
+
 ### Hook syntax
 
 | YSI | pp-hooks |
@@ -283,11 +308,12 @@ Include this file only if the compiler reports `undefined symbol` errors for the
 
 ## Migration checklist
 
-1. Install the PawnPlus plugin for the target server platform.
-2. Copy the four include files into the compiler include path.
-3. Add the includes in the order shown at the top of this document.
-4. Remove every YSI include directive from the gamemode.
-5. Compile and address errors:
+1. Install PawnPlus plugin and copy `PawnPlus.inc` into the compiler include path.
+2. Install pawn-unique and copy `unique-symbol.inc` into the compiler include path.
+3. Copy the four include files from this repository into the compiler include path.
+4. Add the includes in the order shown at the top of this document.
+5. Remove every YSI include directive from the gamemode.
+6. Compile and address errors:
 
 ### Common errors
 
@@ -302,6 +328,9 @@ An extra `y_va` include is still present in the dependency graph. Locate it with
 
 **`undefined symbol "foreach"`**
 The file using `foreach` does not include `pp-foreach.inc` before that usage, or a `#define foreach` from another library shadows the macro. Add the include at the top of the affected file.
+
+**`undefined symbol "UNIQUE_SYMBOL"` or errors in `unique-symbol.inc`**
+pawn-unique is not installed. Copy `unique-symbol.inc` into the compiler include path as described in the Dependencies section.
 
 ### Verify no YSI remains
 
@@ -361,7 +390,8 @@ include/
 ## Credits
 
 - **IS4** — PawnPlus.
-- **Y_Less and contributors** — original YSI `foreach` algorithm, from which the iterator representation in `pp-foreach` is derived.
+- **r4sheed** — pawn-unique, standalone version of `y_unique`.
+- **Y_Less and contributors** — original YSI `foreach` algorithm and `y_unique`, from which the iterator representation and hook naming in this toolkit are derived.
 
 ---
 
